@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.didioverlay.app">
+
+  <!-- Permisos -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+  <application
+      android:allowBackup="true"
+      android:supportsRtl="true">
+
+    <!-- AccessibilityService para leer la UI de DiDi (si no emite notificaciones) -->
+    <service
+        android:name="com.didioverlay.app.OrderAccessibilityService"
+        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService" />
+      </intent-filter>
+      <meta-data
+          android:name="android.accessibilityservice"
+          android:resource="@xml/order_accessibility_config" />
+    </service>
+
+    <!-- Nota:
+         NO declaramos aquí RideNotificationService ni OverlayService
+         porque ya están con [Service(...)] en el código (se fusionan automáticamente).
+         Evitamos duplicados/conflictos en el manifest. -->
+  </application>
+</manifest>

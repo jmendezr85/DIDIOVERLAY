@@ -1,0 +1,31 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DidiOverlay.MainPage"
+             Title="DidiOverlay">
+  <ScrollView>
+    <VerticalStackLayout Spacing="12" Padding="16">
+      <Label x:Name="StatusLabel" Text="Estado: listo" FontAttributes="Bold" FontSize="16" />
+
+      <Button Text="Acceso a notificaciones" Clicked="OnOpenNotificationAccess" />
+      <Button Text="Ver estado del listener" Clicked="OnCheckListenerStatus" />
+      <Button Text="Solicitar rebind del listener" Clicked="OnRebindListener" />
+
+      <BoxView HeightRequest="1" BackgroundColor="#CCCCCC" />
+
+      <Button Text="Permiso de superposición (overlay)" Clicked="OnOpenOverlayPermission" />
+      <HorizontalStackLayout Spacing="8">
+        <Button Text="Iniciar Overlay" Clicked="OnStartOverlay" />
+        <Button Text="Detener Overlay" Clicked="OnStopOverlay" />
+      </HorizontalStackLayout>
+
+      <BoxView HeightRequest="1" BackgroundColor="#CCCCCC" />
+
+      <Button Text="Ajustes de notificaciones de la app" Clicked="OnOpenAppNotificationSettings" />
+      <Button Text="Enviar notificación de prueba" Clicked="OnSendTestNotification" />
+
+      <BoxView HeightRequest="1" BackgroundColor="#CCCCCC" />
+
+      <Button Text="Abrir SettingsPage" Clicked="OnOpenSettings" />
+    </VerticalStackLayout>
+  </ScrollView>
+</ContentPage>

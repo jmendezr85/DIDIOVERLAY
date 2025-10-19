@@ -1,0 +1,38 @@
+﻿<!-- DidiOverlay.csproj (REEMPLAZA TODO EL ARCHIVO) -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-android</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DidiOverlay</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Android -->
+    <ApplicationId>com.didioverlay.app</ApplicationId>
+    <ApplicationTitle>Didi Overlay</ApplicationTitle>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
+    <TargetSdkVersion>34</TargetSdkVersion>
+    <MauiSplashScreenIncludeAndroid12Icon>true</MauiSplashScreenIncludeAndroid12Icon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)'=='net8.0-android'">
+  <AndroidLinkMode>None</AndroidLinkMode>
+</PropertyGroup>
+
+  <!-- Aseguramos usar SOLO el layout de Platforms\Android -->
+  <ItemGroup>
+    <AndroidResource Remove="Resources\layout\overlay_card.xml" />
+    <None Remove="Resources\layout\overlay_card.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AndroidResource Include="Platforms\Android\Resources\layout\overlay_card.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+  </ItemGroup>
+</Project>
