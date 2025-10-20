@@ -1,31 +1,32 @@
-﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="DidiOverlay.MainPage"
              Title="DidiOverlay">
+
   <ScrollView>
-    <VerticalStackLayout Spacing="12" Padding="16">
-      <Label x:Name="StatusLabel" Text="Estado: listo" FontAttributes="Bold" FontSize="16" />
+    <VerticalStackLayout Padding="16" Spacing="12">
 
-      <Button Text="Acceso a notificaciones" Clicked="OnOpenNotificationAccess" />
-      <Button Text="Ver estado del listener" Clicked="OnCheckListenerStatus" />
-      <Button Text="Solicitar rebind del listener" Clicked="OnRebindListener" />
+      <Label Text="DidiOverlay — Controles de prueba" FontSize="18" />
 
-      <BoxView HeightRequest="1" BackgroundColor="#CCCCCC" />
-
-      <Button Text="Permiso de superposición (overlay)" Clicked="OnOpenOverlayPermission" />
-      <HorizontalStackLayout Spacing="8">
-        <Button Text="Iniciar Overlay" Clicked="OnStartOverlay" />
-        <Button Text="Detener Overlay" Clicked="OnStopOverlay" />
+      <!-- OCR -->
+      <HorizontalStackLayout Spacing="12">
+        <Button Text="Permitir captura" Clicked="OnPermitirCaptura"/>
+        <Button Text="Forzar OCR ahora" Clicked="OnForzarOcr"/>
       </HorizontalStackLayout>
 
-      <BoxView HeightRequest="1" BackgroundColor="#CCCCCC" />
+      <!-- Permisos -->
+      <HorizontalStackLayout Spacing="12">
+        <Button Text="Permiso Overlay" Clicked="OnOpenOverlayPermission"/>
+        <Button Text="Acceso a notificaciones" Clicked="OnOpenNotificationAccess"/>
+      </HorizontalStackLayout>
 
-      <Button Text="Ajustes de notificaciones de la app" Clicked="OnOpenAppNotificationSettings" />
-      <Button Text="Enviar notificación de prueba" Clicked="OnSendTestNotification" />
+      <!-- Listener de notificaciones -->
+      <HorizontalStackLayout Spacing="12">
+        <Button Text="Notificación de prueba" Clicked="OnSendTestNotification"/>
+        <Button Text="Verificar listener" Clicked="OnCheckListenerEnabled"/>
+      </HorizontalStackLayout>
 
-      <BoxView HeightRequest="1" BackgroundColor="#CCCCCC" />
-
-      <Button Text="Abrir SettingsPage" Clicked="OnOpenSettings" />
     </VerticalStackLayout>
   </ScrollView>
 </ContentPage>

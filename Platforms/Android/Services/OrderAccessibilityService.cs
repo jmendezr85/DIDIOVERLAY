@@ -1,17 +1,17 @@
 #if ANDROID
 // Platforms/Android/Services/OrderAccessibilityService.cs
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Globalization;
 
-// global:: para no resolver como DidiOverlay.Platforms.Android
 using global::Android.App;
 using global::Android.Content;
 using global::Android.OS;
 using global::Android.Util;
-using global::Android.Views.Accessibility; // EventTypes, AccessibilityNodeInfo, AccessibilityEvent, AccessibilityWindowInfo
+using global::Android.Views.Accessibility; // EventTypes, AccessibilityNodeInfo, AccessibilityEvent
 
 namespace DidiOverlay.Platforms.Android.Services;
 
@@ -25,31 +25,35 @@ namespace DidiOverlay.Platforms.Android.Services;
 public class OrderAccessibilityService : global::Android.AccessibilityServices.AccessibilityService
 {
     const string TAG = "DidiOverlayA11y";
-    const string ACTION_OFFER = "com.didioverlay.ACTION_OFFER";
+    const string ACTION_OFFER     = "com.didioverlay.ACTION_OFFER";
+    const string ACTION_FORCESCAN = "com.didioverlay.FORCE_SCAN";
 
-    // Deja esto en true mientras afinamos
+    // Actívalo mientras afinamos
     const bool DEBUG_DUMP_TREE = true;
 
     static readonly string[] DriverPkgs = {
         "com.didiglobal.driver", "com.xiaojukeji.driver", "com.sdu.didi.psdriver"
     };
 
-    // Pistas típicas de oferta
     static readonly string[] OfferHints = {
-        "nueva solicitud", "solicitud de viaje", "nueva orden", "pedido",
-        "aceptar", "rechazar", "recogida", "pickup", "destino", "viaje",
-        "min", "minutos", "km", "kilómetros", "kilometros", "cop", "$"
+        "nueva solicitud","solicitud de viaje","nueva orden","pedido",
+        "aceptar","rechazar","recogida","pickup","destino","viaje",
+        "min","minutos","km","kilometros","kilómetros","cop","$"
     };
 
     Handler? _pollHandler;
     Java.Lang.IRunnable? _pollRunnable;
+    BroadcastReceiver? _forceReceiver;
 
     protected override void OnServiceConnected()
     {
         base.OnServiceConnected();
         _pollHandler = new Handler(Looper.MainLooper!);
+        RegisterForceReceiver();
         Log.Info(TAG, "AccessibilityService conectado.");
     }
+
+    public override void OnInterrupt() { }
 
     public override void OnAccessibilityEvent(AccessibilityEvent? e)
     {
@@ -65,8 +69,8 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
                               or EventTypes.ViewTextChanged
                               or EventTypes.ViewTextSelectionChanged)
             {
-                ProcessCurrentUiTree("event");
-                SchedulePolling(); // por si la oferta aparece milisegundos después
+                ProcessCurrentUiTree("event", writeDumpIfLooksLikeOffer: true);
+                SchedulePolling();
             }
         }
         catch (Exception ex)
@@ -75,9 +79,26 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
         }
     }
 
-    public override void OnInterrupt() { }
+    // ---------- Receiver: permite forzar lectura desde la app ----------
+    void RegisterForceReceiver()
+    {
+        try { if (_forceReceiver != null) UnregisterReceiver(_forceReceiver); } catch { }
+        _forceReceiver = new ForceScanReceiver(() =>
+        {
+            ProcessCurrentUiTree("force", writeDumpIfLooksLikeOffer: true);
+        });
+        RegisterReceiver(_forceReceiver, new IntentFilter(ACTION_FORCESCAN));
+    }
 
-    // --------- Polling (re-lectura durante ~4s) ----------
+    public override bool OnUnbind(Intent? intent)
+    {
+        try { if (_forceReceiver != null) UnregisterReceiver(_forceReceiver); } catch { }
+        _forceReceiver = null;
+        CancelPolling();
+        return base.OnUnbind(intent);
+    }
+
+    // ---------- Polling (re-lectura ~4s) ----------
     void SchedulePolling()
     {
         CancelPolling();
@@ -89,7 +110,7 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
             try
             {
                 ticks++;
-                ProcessCurrentUiTree($"poll#{ticks}");
+                ProcessCurrentUiTree($"poll#{ticks}", writeDumpIfLooksLikeOffer: ticks <= 2);
                 if (ticks < 6 && _pollHandler != null && _pollRunnable != null)
                     _pollHandler.PostDelayed(_pollRunnable, 700);
             }
@@ -105,8 +126,8 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
         _pollRunnable = null;
     }
 
-    // --------- Lectura de la UI (TODAS las ventanas) ----------
-    void ProcessCurrentUiTree(string reason)
+    // ---------- Lectura de TODAS las ventanas + dump opcional ----------
+    void ProcessCurrentUiTree(string reason, bool writeDumpIfLooksLikeOffer)
     {
         var (text, dump) = CollectAllWindowsTextAndDump();
         if (string.IsNullOrWhiteSpace(text))
@@ -117,26 +138,29 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
 
         bool looksLikeOffer = OfferHints.Any(h => text.Contains(h, StringComparison.OrdinalIgnoreCase));
 
-        if (DEBUG_DUMP_TREE && looksLikeOffer && !string.IsNullOrEmpty(dump))
+        if (DEBUG_DUMP_TREE && looksLikeOffer && writeDumpIfLooksLikeOffer && !string.IsNullOrEmpty(dump))
+        {
             Log.Debug(TAG, $"A11y dump ({reason}):\n{dump}");
+            TryWriteDumpToFile(dump); // también a archivo para inspección
+        }
 
         var offer = ParseOffer(text);
         if (offer != null)
         {
             Log.Info(TAG, $"A11y Oferta: fare={offer.FareCop} COP, min={offer.Minutes}, pick={offer.PickupKm:0.##}km, trip={offer.TripKm:0.##}km");
             var intent = new Intent(ACTION_OFFER);
-            intent.PutExtra("fareCop", offer.FareCop);
-            intent.PutExtra("minutes", offer.Minutes);
-            intent.PutExtra("pickupKm", (float)offer.PickupKm);
-            intent.PutExtra("tripKm", (float)offer.TripKm);
+            intent.PutExtra("fareCop",   offer.FareCop);
+            intent.PutExtra("minutes",   offer.Minutes);
+            intent.PutExtra("pickupKm",  (float)offer.PickupKm);
+            intent.PutExtra("tripKm",    (float)offer.TripKm);
             SendBroadcast(intent);
         }
         else
         {
             if (looksLikeOffer)
-                Log.Debug(TAG, $"A11y {reason}: texto (parece oferta pero sin parseo): '{TrimLong(text, 500)}'");
+                Log.Debug(TAG, $"A11y {reason}: PARECE oferta, pero sin parseo => '{TrimLong(text, 500)}'");
             else
-                Log.Debug(TAG, $"A11y {reason}: texto (sin oferta): '{TrimLong(text, 250)}'");
+                Log.Debug(TAG, $"A11y {reason}: texto (sin oferta) => '{TrimLong(text, 250)}'");
         }
     }
 
@@ -147,16 +171,12 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
 
         // 1) Ventana activa
         var root = RootInActiveWindow;
-        if (root != null)
-        {
-            try { Walk(root, flat, dump, 0, 0); }
-            finally { root.Recycle(); }
-        }
+        if (root != null) { try { Walk(root, flat, dump, 0, 0); } finally { root.Recycle(); } }
 
-        // 2) Otras ventanas (diálogos, overlays)
+        // 2) Otras ventanas / overlays interactivos
         try
         {
-            var wins = Windows; // IList<AccessibilityWindowInfo>
+            var wins = Windows;
             if (wins != null)
             {
                 for (int w = 0; w < wins.Count; w++)
@@ -176,7 +196,7 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
                 }
             }
         }
-        catch { /* algunas ROMs dan null o excepciones aquí */ }
+        catch { }
 
         var s = flat.ToString().Replace("\n", " ").Replace("\r", " ").ToLowerInvariant();
         s = Regex.Replace(s, @"\s+", " ").Trim();
@@ -189,34 +209,49 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
     {
         try
         {
-            var txt  = node.Text?.ToString();
-            var desc = node.ContentDescription?.ToString();
-            var viewId = node.ViewIdResourceName ?? "";
-            var cls    = node.ClassName ?? "";
-            var pkg    = node.PackageName ?? "";
+            var txt   = node.Text?.ToString();
+            var desc  = node.ContentDescription?.ToString();
+            var id    = node.ViewIdResourceName ?? "";
+            var cls   = node.ClassName ?? "";
+            var pkg   = node.PackageName ?? "";
 
             string indent = new string(' ', Math.Min(depth, 16) * 2);
             if (DEBUG_DUMP_TREE)
             {
                 dump.Append(indent)
-                    .Append($"[{depth}:{index}] {cls} id='{viewId}' pkg='{pkg}' ")
+                    .Append($"[{depth}:{index}] {cls} id='{id}' pkg='{pkg}' ")
                     .Append($"txt='{(txt ?? "").Replace("\n"," ")}' ")
                     .Append($"desc='{(desc ?? "").Replace("\n"," ")}'")
                     .AppendLine();
             }
 
             var t = (txt ?? desc ?? "").Trim();
-            if (!string.IsNullOrEmpty(t))
-                flat.Append(t).Append(' ');
+            if (!string.IsNullOrEmpty(t)) flat.Append(t).Append(' ');
 
-            int childCount = node.ChildCount;
-            for (int i = 0; i < childCount; i++)
+            for (int i = 0; i < node.ChildCount; i++)
             {
                 var c = node.GetChild(i);
                 if (c != null) { Walk(c, flat, dump, depth + 1, i); c.Recycle(); }
             }
         }
         catch { }
+    }
+
+    void TryWriteDumpToFile(string dump)
+    {
+        try
+        {
+            var dir = GetExternalFilesDir(null)?.AbsolutePath;
+            if (string.IsNullOrEmpty(dir)) return;
+            var ts  = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var fn  = Path.Combine(dir!, $"a11y_dump_{ts}.txt");
+            File.WriteAllText(fn, dump, Encoding.UTF8);
+            Log.Info(TAG, $"Dump guardado: {fn}");
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(TAG, $"No se pudo guardar dump: {ex.Message}");
+        }
     }
 
     // --------- Parseo ---------
@@ -278,5 +313,20 @@ public class OrderAccessibilityService : global::Android.AccessibilityServices.A
 
     static string TrimLong(string s, int max)
         => (s.Length <= max) ? s : (s.Substring(0, max) + "…");
+
+    // ------------ Receiver interno ------------
+    class ForceScanReceiver : BroadcastReceiver
+    {
+        private readonly System.Action _onForce;              // 👈 Fully-qualified
+        public ForceScanReceiver(System.Action onForce)       // 👈 Fully-qualified
+        {
+            _onForce = onForce;
+        }
+
+        public override void OnReceive(Context? context, Intent? intent)
+        {
+            if (intent?.Action == ACTION_FORCESCAN) _onForce();
+        }
+    }
 }
 #endif

@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DidiOverlay</name>
+    </assembly>
+    <members>
+        <member name="T:DidiOverlay.Platforms.Android.Overlay.OverlayManager">
+            <summary>
+            Gestor de overlay para Android. Usa SIEMPRE tipos del SDK con el prefijo global::Android
+            para evitar colisiones con el namespace DidiOverlay.Platforms.Android.
+            </summary>
+        </member>
+        <member name="M:DidiOverlay.Platforms.Android.Overlay.OverlayManager.Show(Android.Content.Context,Android.Views.View)">
+            <summary>
+            Muestra el overlay con LayoutParams por defecto (arriba, centrado).
+            </summary>
+        </member>
+        <member name="M:DidiOverlay.Platforms.Android.Overlay.OverlayManager.Show(Android.Content.Context,Android.Views.View,Android.Views.WindowManagerLayoutParams)">
+            <summary>
+            Muestra el overlay con LayoutParams personalizados.
+            </summary>
+        </member>
+        <member name="M:DidiOverlay.Platforms.Android.Overlay.OverlayManager.UpdatePosition(System.Int32,System.Int32)">
+            <summary>
+            Actualiza la posición (x,y) del overlay.
+            </summary>
+        </member>
+        <member name="M:DidiOverlay.Platforms.Android.Overlay.OverlayManager.UpdateLayout(System.Action{Android.Views.WindowManagerLayoutParams})">
+            <summary>
+            Permite mutar los LayoutParams del overlay.
+            </summary>
+        </member>
+        <member name="M:DidiOverlay.Platforms.Android.Overlay.OverlayManager.Hide(Android.Content.Context)">
+            <summary>
+            Oculta y libera el overlay.
+            </summary>
+        </member>
+    </members>
+</doc>

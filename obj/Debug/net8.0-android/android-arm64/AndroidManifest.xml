@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Una herramienta generó este código.
+    Se generó desde C:\Users\USUARIO\DidiOverlay\Platforms\Android\AndroidManifest.xml
+    Los cambios realizados en este archivo pueden generar un comportamiento incorrecto y se perderán si
+    se regenera el contenido.
+    -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.didioverlay.app" android:versionCode="1" android:versionName="1.0.0">
+  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
+  <!-- ✅ No declarar <uses-sdk> aquí. El minSdk viene del csproj (SupportedOSPlatformVersion). -->
+  <!-- Android 13+ (Tiramisu) para notificaciones del FGS -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Android 14+: tipos de servicios en 1er plano -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+  <!-- Si usas overlay de sistema -->
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <application android:allowBackup="true" android:supportsRtl="true" android:name="crc642a654b0d19b44cef.MainApplication" android:label="DidiOverlay" android:debuggable="true" android:extractNativeLibs="true">
+    <!-- No repetimos <service>/<activity> aquí: los añade el AOT por los atributos [Service]/[Activity] del código -->
+    <uses-library android:name="org.apache.http.legacy" android:required="false" />
+    <activity android:configChanges="density|orientation|smallestScreenSize|screenLayout|screenSize|uiMode" android:exported="true" android:theme="@style/Maui.SplashTheme" android:name="crc642a654b0d19b44cef.MainActivity">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    <activity android:excludeFromRecents="true" android:exported="false" android:name="com.didioverlay.app.ScreenCaptureStarterActivity" android:noHistory="true" android:taskAffinity="" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+    <service android:exported="true" android:name="com.didioverlay.app.OrderAccessibilityService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/order_accessibility_config" />
+      <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService" />
+      </intent-filter>
+    </service>
+    <service android:exported="false" android:foregroundServiceType="dataSync" android:name="com.didioverlay.app.OverlayService" />
+    <service android:exported="false" android:name="com.didioverlay.RideNotificationService" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+    <service android:exported="false" android:foregroundServiceType="mediaProjection" android:name="com.didioverlay.app.ScreenOcrService" />
+    <receiver android:enabled="true" android:exported="true" android:name="crc64ec8b6ff5a5186a78.OfferReceiver">
+      <intent-filter>
+        <action android:name="com.didioverlay.ACTION_OFFER" />
+      </intent-filter>
+    </receiver>
+    <activity android:configChanges="orientation|screenSize" android:exported="false" android:name="crc6468b6408a11370c2f.WebAuthenticatorIntermediateActivity" />
+    <provider android:authorities="com.didioverlay.app.fileProvider" android:exported="false" android:grantUriPermissions="true" android:name="microsoft.maui.essentials.fileProvider">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/microsoft_maui_essentials_fileprovider_file_paths" />
+    </provider>
+    <receiver android:enabled="true" android:exported="false" android:label="Essentials Connectivity Broadcast Receiver" android:name="crc64e53d2f592022988e.ConnectivityBroadcastReceiver" />
+    <activity android:configChanges="orientation|screenSize" android:exported="false" android:name="crc64ba438d8f48cf7e75.IntermediateActivity" />
+    <receiver android:enabled="true" android:exported="false" android:label="Essentials Battery Broadcast Receiver" android:name="crc640a8d9a12ddbf2cf2.BatteryBroadcastReceiver" />
+    <receiver android:enabled="true" android:exported="false" android:label="Essentials Energy Saver Broadcast Receiver" android:name="crc640a8d9a12ddbf2cf2.EnergySaverBroadcastReceiver" />
+    <service android:name="crc64396a3fe5f8138e3f.KeepAliveService" />
+    <provider android:name="mono.MonoRuntimeProvider" android:exported="false" android:initOrder="1999999999" android:authorities="com.didioverlay.app.mono.MonoRuntimeProvider.__mono_init__" />
+  </application>
+</manifest>

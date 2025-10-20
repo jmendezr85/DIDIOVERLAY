@@ -13,7 +13,6 @@
         "packagesPath": "C:\\Users\\USUARIO\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\USUARIO\\DidiOverlay\\obj\\",
         "projectStyle": "PackageReference",
-        "crossTargeting": true,
         "configFilePaths": [
           "C:\\Users\\USUARIO\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
@@ -53,6 +52,10 @@
               "target": "Package",
               "version": "[8.0.21, )",
               "autoReferenced": true
+            },
+            "Xamarin.Google.MLKit.TextRecognition.Bundled.Common": {
+              "target": "Package",
+              "version": "[117.0.0.5, )"
             }
           },
           "imports": [
@@ -78,16 +81,7 @@
         }
       },
       "runtimes": {
-        "android-arm": {
-          "#import": []
-        },
         "android-arm64": {
-          "#import": []
-        },
-        "android-x64": {
-          "#import": []
-        },
-        "android-x86": {
           "#import": []
         }
       }

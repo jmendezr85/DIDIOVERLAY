@@ -1,0 +1,33 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools"
+          package="com.didioverlay.app">
+
+  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
+
+  <!-- Superposición si usas OverlayService -->
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+
+  <!-- Services bind (solo declaración de permisos protegidos) -->
+  <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+                   tools:ignore="ProtectedPermissions" />
+  <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"
+                   tools:ignore="ProtectedPermissions" />
+
+  <!-- Android 13+: permiso de notificaciones para el ForegroundService -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <!-- Android 14+: tipo de FGS para MediaProjection -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
+  <application android:label="Didi Overlay"
+               android:supportsRtl="true"
+               tools:targetApi="34">
+    <!--
+      Los atributos [Service]/[Activity] en el código generan las entradas necesarias.
+      Este manifest solo concentra permisos.
+    -->
+  </application>
+</manifest>

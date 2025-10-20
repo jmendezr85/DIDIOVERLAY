@@ -1,15 +1,13 @@
-﻿// MainPage.xaml.cs
-using System;
+﻿using System;
 using Microsoft.Maui.Controls;
-using DidiOverlay.Platforms.Android.Services;
 
 #if ANDROID
+using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Provider;
-using Android.App;
-using Android.Service.Notification;          // RequestRebind
-using AndroidX.Core.App;                    // NotificationManagerCompat
+using AndroidX.Core.App;
+using AndroidX.Core.Content;
 #endif
 
 namespace DidiOverlay;
@@ -21,173 +19,180 @@ public partial class MainPage : ContentPage
         InitializeComponent();
     }
 
-    async void OnOpenOverlayPermission(object sender, EventArgs e)
-    {
 #if ANDROID
+    // =========================
+    // BOTONES DE OCR
+    // =========================
+
+    // Abre el diálogo del sistema para permitir la captura de pantalla (MediaProjection)
+    void OnPermitirCaptura(object sender, EventArgs e)
+    {
+        var ctx = Android.App.Application.Context;
+
+        // Intenta resolver si la Activity quedó en Activities o en Services
+        var starterType =
+            Type.GetType("DidiOverlay.Platforms.Android.Activities.ScreenCaptureStarterActivity, DidiOverlay")
+            ?? Type.GetType("DidiOverlay.Platforms.Android.Services.ScreenCaptureStarterActivity, DidiOverlay");
+
+        if (starterType == null)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert(
+                "OCR",
+                "No se encontró ScreenCaptureStarterActivity. Verifica el namespace (Activities o Services).",
+                "OK");
+            return;
+        }
+
+        // System.Type -> Java.Lang.Class para el ctor de Intent
+        var starterJClass = Java.Lang.Class.FromType(starterType);
+        if (starterJClass == null)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert(
+                "OCR",
+                "No se pudo resolver la clase Java para ScreenCaptureStarterActivity.",
+                "OK");
+            return;
+        }
+
+        var intent = new Intent(ctx, starterJClass);
+        intent.AddFlags(ActivityFlags.NewTask);
+        ctx.StartActivity(intent);
+    }
+
+    // Dispara un OCR inmediato (si el servicio ya corre) o lo arranca como FGS
+    void OnForzarOcr(object sender, EventArgs e)
+    {
+        var ctx = Android.App.Application.Context;
+
+        var svcType = Type.GetType("DidiOverlay.Platforms.Android.Services.ScreenOcrService, DidiOverlay");
+        if (svcType == null)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert(
+                "OCR",
+                "No se encontró ScreenOcrService. Verifica el namespace.",
+                "OK");
+            return;
+        }
+
+        var svcJClass = Java.Lang.Class.FromType(svcType);
+        if (svcJClass == null)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert(
+                "OCR",
+                "No se pudo resolver la clase Java para ScreenOcrService.",
+                "OK");
+            return;
+        }
+
+        var svc = new Intent(ctx, svcJClass)
+            .SetAction("com.didioverlay.action.FORCE_OCR"); // debe coincidir con ScreenOcrService.ActionForceOcr
+
+        ContextCompat.StartForegroundService(ctx, svc);
+    }
+
+    // =========================
+    // PERMISOS
+    // =========================
+
+    // Abre ajustes del permiso de superposición (SYSTEM_ALERT_WINDOW)
+    void OnOpenOverlayPermission(object sender, EventArgs e)
+    {
         try
         {
-            var ctx = Android.App.Application.Context!;
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
-            {
-                var can = Settings.CanDrawOverlays(ctx);
-                if (!can)
-                {
-                    var i = new Intent(Settings.ActionManageOverlayPermission);
-                    i.SetFlags(ActivityFlags.NewTask);
-                    ctx.StartActivity(i);
-                    StatusLabel.Text = "Abriendo ajustes de superposición…";
-                    return;
-                }
-            }
-            StatusLabel.Text = "Permiso de superposición OK";
+            var ctx = Android.App.Application.Context;
+            var uri = Android.Net.Uri.Parse("package:" + ctx.PackageName);
+            var intent = new Intent(Settings.ActionManageOverlayPermission, uri);
+            intent.AddFlags(ActivityFlags.NewTask);
+            ctx.StartActivity(intent);
         }
-        catch { StatusLabel.Text = "Error al abrir ajustes de superposición"; }
-#else
-        await DisplayAlert("Solo Android", "Este permiso es solo en Android.", "OK");
-#endif
+        catch (Exception ex)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert("Overlay", $"Error: {ex.Message}", "OK");
+        }
     }
 
-    async void OnOpenNotificationAccess(object sender, EventArgs e)
+    // Abre ajustes de Acceso a notificaciones (para el NotificationListenerService)
+    void OnOpenNotificationAccess(object sender, EventArgs e)
     {
-#if ANDROID
         try
         {
-            var ctx = Android.App.Application.Context!;
-            var i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-            i.SetFlags(ActivityFlags.NewTask);
-            ctx.StartActivity(i);
-            StatusLabel.Text = "Abre y activa DidiOverlay en Acceso a notificaciones.";
+            var ctx = Android.App.Application.Context;
+            var intent = new Intent(Settings.ActionNotificationListenerSettings);
+            intent.AddFlags(ActivityFlags.NewTask);
+            ctx.StartActivity(intent);
         }
-        catch { StatusLabel.Text = "Error al abrir ajustes de listener"; }
-#else
-        await DisplayAlert("Solo Android", "Este permiso es solo en Android.", "OK");
-#endif
-    }
-
-    async void OnOpenAppNotificationSettings(object sender, EventArgs e)
-    {
-#if ANDROID
-        try
+        catch (Exception ex)
         {
-            var ctx = Android.App.Application.Context!;
-            var i = new Intent(Settings.ActionAppNotificationSettings);
-            i.PutExtra(Settings.ExtraAppPackage, ctx.PackageName);
-            i.SetFlags(ActivityFlags.NewTask);
-            ctx.StartActivity(i);
-            StatusLabel.Text = "Abriendo ajustes de notificaciones de la app…";
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert("Ajustes", $"Error: {ex.Message}", "OK");
         }
-        catch { StatusLabel.Text = "No se pudieron abrir los ajustes de la app"; }
-#else
-        await System.Threading.Tasks.Task.CompletedTask;
-#endif
     }
 
-    void OnStartOverlay(object sender, EventArgs e)
-    {
-#if ANDROID
-        try
-        {
-            var ctx = Android.App.Application.Context!;
-            var intent = new Intent(ctx, typeof(OverlayService));
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-                ctx.StartForegroundService(intent);
-            else
-                ctx.StartService(intent);
+    // =========================
+    // LISTENER DE NOTIFICACIONES
+    // =========================
 
-            StatusLabel.Text = "Overlay iniciado";
-        }
-        catch { StatusLabel.Text = "Error al iniciar Overlay"; }
-#endif
-    }
-
-    void OnStopOverlay(object sender, EventArgs e)
-    {
-#if ANDROID
-        try
-        {
-            var ctx = Android.App.Application.Context!;
-            var intent = new Intent(ctx, typeof(OverlayService));
-            ctx.StopService(intent);
-            StatusLabel.Text = "Overlay detenido";
-        }
-        catch { StatusLabel.Text = "Error al detener Overlay"; }
-#endif
-    }
-
-    async void OnOpenSettings(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new SettingsPage());
-    }
-
-    void OnCheckListenerStatus(object sender, EventArgs e)
-    {
-#if ANDROID
-        try
-        {
-            var ctx = Android.App.Application.Context!;
-            var enabledPkgs = NotificationManagerCompat.GetEnabledListenerPackages(ctx);
-            bool enabled = enabledPkgs.Contains(ctx.PackageName);
-            StatusLabel.Text = enabled ? "Listener HABILITADO" : "Listener NO habilitado (actívalo en ajustes)";
-        }
-        catch { StatusLabel.Text = "No se pudo verificar el estado del listener"; }
-#endif
-    }
-
-    void OnRebindListener(object sender, EventArgs e)
-    {
-#if ANDROID
-        try
-        {
-            var ctx = Android.App.Application.Context!;
-            // Usa el nombre EXACTO declarado en [Service(Name="com.didioverlay.app.RideNotificationService")]
-            string pkg = ctx.PackageName; // "com.didioverlay.app"
-            var comp = new ComponentName(pkg, "com.didioverlay.app.RideNotificationService");
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.N) // API 24+
-            {
-                NotificationListenerService.RequestRebind(comp);
-                StatusLabel.Text = "Solicitado rebind del listener. Si no reacciona, apaga/enciende el permiso.";
-            }
-            else
-            {
-                StatusLabel.Text = "Android < 7.0: haz toggle manual del permiso (des/activar).";
-            }
-        }
-        catch
-        {
-            StatusLabel.Text = "No se pudo solicitar el rebind. Haz toggle manual del permiso.";
-        }
-#endif
-    }
-
+    // Envía una notificación de prueba para verificar el listener
     void OnSendTestNotification(object sender, EventArgs e)
     {
-#if ANDROID
         try
         {
-            const string CH_ID = "test_channel";
-            var ctx = Android.App.Application.Context!;
+            var ctx = Android.App.Application.Context;
+            const string channelId = "didi_overlay_test";
 
             if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
             {
-                var nm = (NotificationManager)ctx.GetSystemService(Context.NotificationService)!;
-                var ch = new NotificationChannel(CH_ID, "Pruebas", NotificationImportance.Default);
+                var nm = (NotificationManager)ctx.GetSystemService(Context.NotificationService);
+                var ch = new NotificationChannel(channelId, "Pruebas DidiOverlay", NotificationImportance.Default)
+                {
+                    Description = "Canal para notificaciones de prueba"
+                };
                 nm.CreateNotificationChannel(ch);
             }
 
-            string title = "Nueva oferta";
-            string body  = "COP 14.000 · 12 minutos · recogida 0,8 km · viaje 4,5 km";
-
-            var notif = new AndroidX.Core.App.NotificationCompat.Builder(ctx, CH_ID)
-                .SetSmallIcon(global::Android.Resource.Drawable.IcDialogInfo)
-                .SetContentTitle(title)
-                .SetContentText(body)
-                .SetStyle(new AndroidX.Core.App.NotificationCompat.BigTextStyle().BigText(body))
+            var notif = new NotificationCompat.Builder(ctx, channelId)
+                .SetContentTitle("DidiOverlay — prueba")
+                .SetContentText("Mensaje de prueba para el listener de notificaciones.")
+                .SetSmallIcon(Android.Resource.Drawable.IcDialogInfo)
+                .SetAutoCancel(true)
                 .Build();
 
-            NotificationManagerCompat.From(ctx).Notify(2025, notif);
-            StatusLabel.Text = "Notificación de prueba enviada (nota: el Listener SOLO procesa DiDi Conductor)";
+            NotificationManagerCompat.From(ctx).Notify(1001, notif);
         }
-        catch { StatusLabel.Text = "No se pudo enviar la notificación de prueba"; }
-#endif
+        catch (Exception ex)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert("Notificación", $"Error: {ex.Message}", "OK");
+        }
     }
+
+    // Verifica si el NotificationListenerService está habilitado
+    void OnCheckListenerEnabled(object sender, EventArgs e)
+    {
+        try
+        {
+            var ctx = Android.App.Application.Context;
+            var enabled = Settings.Secure.GetString(ctx.ContentResolver, "enabled_notification_listeners");
+
+            var listenerJClass = Java.Lang.Class.FromType(typeof(DidiOverlay.Platforms.Android.Services.RideNotificationService));
+            if (listenerJClass == null)
+            {
+                Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert("Listener",
+                    "No se pudo resolver la clase del listener.",
+                    "OK");
+                return;
+            }
+
+            var comp = new ComponentName(ctx, listenerJClass);
+
+            bool isEnabled = enabled != null && comp != null && enabled.Contains(comp.FlattenToString());
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert(
+                "Listener de notificaciones",
+                isEnabled ? "Habilitado ✅" : "Deshabilitado ❌",
+                "OK");
+        }
+        catch (Exception ex)
+        {
+            Microsoft.Maui.Controls.Application.Current?.MainPage?.DisplayAlert("Listener", $"Error: {ex.Message}", "OK");
+        }
+    }
+#endif
 }

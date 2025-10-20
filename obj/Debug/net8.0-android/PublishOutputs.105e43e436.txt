@@ -1,0 +1,1 @@
+C:\Users\USUARIO\DidiOverlay\bin\Debug\net8.0-android\publish\_Microsoft.Android.Resource.Designer.dll
